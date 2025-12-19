@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trace // Live Scanner</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --term-green: #00ff41;
+            --term-dim: #008f11;
+            --card-bg: #111;
+        }
+
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: var(--bg);
+            color: #e0e0e0;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            width: 100%;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        h1 {
+            color: var(--term-green);
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        /* Input Area */
+        .input-group {
+            margin: 40px 0;
+        }
+
+        input[type="text"] {
+            background: #000;
+            border: 2px solid var(--term-dim);
+            color: var(--term-green);
+            padding: 15px;
+            width: 60%;
+            max-width: 400px;
+            font-family: inherit;
+            font-size: 1.2em;
+            outline: none;
+            border-radius: 5px;
+        }
+
+        button {
+            background: var(--term-dim);
+            color: #000;
+            border: none;
+            padding: 17px 30px;
+            font-family: inherit;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 1.2em;
+            border-radius: 5px;
+            margin-left: 10px;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            background: var(--term-green);
+            box-shadow: 0 0 15px var(--term-green);
+        }
+
+        button:disabled {
+            background: #333;
+            color: #666;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        /* Status Bar */
+        #status-msg {
+            margin: 20px 0;
+            color: #ffeb3b;
+            min-height: 24px;
+            font-weight: bold;
+            display: none;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 15px;
+            height: 15px;
+            border: 2px solid #ffeb3b;
+            border-top: 2px solid transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+
+        /* Intro Panel */
+        #intro-panel {
+            margin-top: 50px;
+            border: 1px dashed #333;
+            padding: 20px;
+            color: #666;
+        }
+
+        .system-status {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            font-size: 0.9em;
+        }
+
+        .status-item span {
+            display: block;
+            color: var(--term-dim);
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        /* Search Bar for Results */
+        #search-container {
+            display: none;
+            margin: 20px 0;
+        }
+
+        .search-bar {
+            width: 100%;
+            padding: 10px;
+            background: #1a1a1a;
+            border: none;
+            border-bottom: 2px solid var(--term-dim);
+            color: white;
+            font-size: 1em;
+            outline: none;
+        }
+
+        /* Results Grid */
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 15px;
+            text-align: left;
+            margin-top: 30px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid #333;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid var(--term-green);
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        .card strong {
+            display: block;
+            color: #fff;
+            margin-bottom: 5px;
+            font-size: 1.1em;
+        }
+
+        .card a {
+            color: var(--term-green);
+            text-decoration: none;
+            font-size: 0.9em;
+            word-break: break-all;
+        }
+
+        .card a:hover {
+            text-decoration: underline;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        footer {
+            margin-top: auto;
+            font-size: 0.8em;
+            color: #444;
+            border-top: 1px solid #222;
+            padding-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>🕵️ Trace</h1>
+        <p>Live Username Scanner</p>
+
+        <div class="input-group">
+            <input type="text" id="usernameInput" placeholder="Enter target username..." autocomplete="off">
+            <button id="scanBtn" onclick="startScan()">SCAN</button>
+        </div>
+
+        <div id="status-msg">
+            <span class="spinner"></span> Scanned <span id="site-count">0</span> sites... Found: <span
+                id="found-count">0</span>
+        </div>
+
+        <div id="intro-panel">
+            <h3 style="color: var(--term-dim);">SYSTEM STATUS: ONLINE</h3>
+            <div class="system-status">
+                <div class="status-item">
+                    <span>Active Nodes</span>
+                    400+ Sites
+                </div>
+                <div class="status-item">
+                    <span>Latency</span>
+                    < 20ms </div>
+                        <div class="status-item">
+                            <span>Protocol</span>
+                            Trace_V1
+                        </div>
+                </div>
+                <p style="margin-top: 20px; font-size: 0.8em;">Target acquisition ready. Enter username to initiate deep
+                    scan.</p>
+            </div>
+
+            <div id="search-container">
+                <input type="text" id="filterInput" class="search-bar" placeholder="🔍 Filter results..."
+                    onkeyup="filterResults()">
+            </div>
+
+            <div class="results-grid" id="resultsGrid">
+            </div>
+
+            <footer>
+                <p>&copy; 2025 Trace. This tool is for educational purposes only. The data is retrieved from
+                    public sources. Do not use for harassment or illegal tracking.</p>
+            </footer>
+        </div>
+
+        <script>
+            function filterResults() {
+                let input = document.getElementById('filterInput').value.toLowerCase();
+                let cards = document.getElementsByClassName('card');
+
+                for (let i = 0; i < cards.length; i++) {
+                    let text = cards[i].innerText.toLowerCase();
+                    cards[i].style.display = text.includes(input) ? "" : "none";
+                }
+            }
+
+            function startScan() {
+                const username = document.getElementById('usernameInput').value.trim();
+                if (!username) return;
+
+                // UI Reset
+                const btn = document.getElementById('scanBtn');
+                const grid = document.getElementById('resultsGrid');
+                const status = document.getElementById('status-msg');
+                const intro = document.getElementById('intro-panel');
+
+                const searchContainer = document.getElementById('search-container');
+                const filterInput = document.getElementById('filterInput');
+
+                btn.disabled = true;
+                btn.innerText = "SCANNING...";
+                grid.innerHTML = ""; // Clear old results
+                status.style.display = "block";
+                intro.style.display = "none";
+                searchContainer.style.display = "none";
+                filterInput.value = "";
+
+                // Restore status HTML structure (needed for subsequent scans)
+                status.innerHTML = '<span class="spinner"></span> Scanned <span id="site-count">0</span> sites... Found: <span id="found-count">0</span>';
+
+                // Now grab the fresh elements
+                const foundCount = document.getElementById('found-count');
+                const siteCount = document.getElementById('site-count');
+
+                // Start Event Stream with timestamp to prevent caching
+                const timestamp = new Date().getTime();
+                const eventSource = new EventSource(`/stream?username=${encodeURIComponent(username)}&t=${timestamp}`);
+
+                let found = 0;
+                let scanned = 0;
+
+                eventSource.onmessage = function (event) {
+                    const data = JSON.parse(event.data);
+
+                    // Check if scan is finished
+                    if (data.status === 'done') {
+                        eventSource.close();
+                        btn.disabled = false;
+                        btn.innerText = "SCAN";
+                        status.innerHTML = `✅ Scan Complete. Scanned ${scanned} sites. Found ${found} profiles.`;
+                        searchContainer.style.display = "block";
+                        return;
+                    }
+
+                    if (data.type === 'scanned') {
+                        scanned++;
+                        siteCount.innerText = scanned;
+                    }
+
+                    if (data.type === 'found') {
+                        // Create Card
+                        found++;
+                        foundCount.innerText = found;
+
+                        const card = document.createElement('div');
+                        card.className = 'card';
+                        card.innerHTML = `
+                    <strong>${data.site}</strong>
+                    <a href="${data.url}" target="_blank">${data.url}</a>
+                `;
+                        grid.appendChild(card);
+                    }
+                };
+
+                eventSource.onerror = function () {
+                    eventSource.close();
+                    btn.disabled = false;
+                    btn.innerText = "SCAN";
+                    status.innerText = "❌ Connection lost or timed out.";
+                };
+            }
+        </script>
+
+
+</body>
+
+</html>
