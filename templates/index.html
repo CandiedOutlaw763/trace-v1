@@ -292,10 +292,10 @@
                 grid.innerHTML = ""; // Clear old results
                 status.style.display = "block";
                 intro.style.display = "none";
-                searchContainer.style.display = "none";
+                searchContainer.style.display = "block"; // Show immediately
                 filterInput.value = "";
 
-                // Restore status HTML structure (needed for subsequent scans)
+                // Restore status HTML structure
                 status.innerHTML = '<span class="spinner"></span> Scanned <span id="site-count">0</span> sites... Found: <span id="found-count">0</span>';
 
                 // Now grab the fresh elements
@@ -318,7 +318,6 @@
                         btn.disabled = false;
                         btn.innerText = "SCAN";
                         status.innerHTML = `✅ Scan Complete. Scanned ${scanned} sites. Found ${found} profiles.`;
-                        searchContainer.style.display = "block";
                         return;
                     }
 
@@ -338,6 +337,13 @@
                     <strong>${data.site}</strong>
                     <a href="${data.url}" target="_blank">${data.url}</a>
                 `;
+
+                        // Live Filter Check
+                        const filterText = filterInput.value.toLowerCase();
+                        if (filterText && !data.site.toLowerCase().includes(filterText) && !data.url.toLowerCase().includes(filterText)) {
+                            card.style.display = "none";
+                        }
+
                         grid.appendChild(card);
                     }
                 };
